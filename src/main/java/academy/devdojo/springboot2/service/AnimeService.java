@@ -1,44 +1,49 @@
 package academy.devdojo.springboot2.service;
 
 import academy.devdojo.springboot2.domain.Anime;
+import academy.devdojo.springboot2.mapper.AnimeMapper;
 import academy.devdojo.springboot2.repository.AnimeRepository;
+import academy.devdojo.springboot2.requests.AnimePostRequestBody;
+import academy.devdojo.springboot2.requests.AnimePutResquestBody;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 @Service
-public class AnimeService implements AnimeRepository {
+@RequiredArgsConstructor
+public class AnimeService {
 
-    // private final AnimeRepository animeRepository
-
-    private static List<Anime> animes;
-
-    static {
-        animes = new ArrayList<>(List.of(new Anime(1L, "DBZ"), new Anime(2L, "One Piece")));
-    }
+    private final AnimeRepository animeRepository;
 
     public List<Anime> listAll() {
-        return animes;
+        return animeRepository.findAll();
     }
 
-    public Anime findById(long id) {
-        return animes.stream()
-                .filter(anime -> anime.getId().equals(id))
-                .findFirst()
+    public List<Anime> findByName(String name) {
+        return animeRepository.findByName(name);
+    }
+
+    public Anime findByIdOrThrowBadRequestException(long id) {
+        return animeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Anime Not Found"));
     }
 
-    public Anime save(Anime anime) {
-        anime.setId(ThreadLocalRandom.current().nextLong(3, 100000));
-        animes.add(anime);
-        return anime;
+    public Anime save(AnimePostRequestBody animePostRequestBody) {
+        return animeRepository.save(AnimeMapper.INSTANCE.toAnime(animePostRequestBody));
     }
 
     public void delete(Long id) {
-        animes.remove(findById(id));
+        animeRepository.delete(findByIdOrThrowBadRequestException(id));
+    }
+
+    public void replace(AnimePutResquestBody animePutResquestBody) {
+        Anime savedAnime = findByIdOrThrowBadRequestException(animePutResquestBody.getId());
+        Anime anime = AnimeMapper.INSTANCE.toAnime(animePutResquestBody);
+        anime.setId(savedAnime.getId());
+        animeRepository.save(anime);
+
     }
 }
